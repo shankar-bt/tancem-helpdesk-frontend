@@ -54,6 +54,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
     if (isPinned) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
+
       setAnchor(null);
     }, 600);
   };
@@ -86,10 +87,10 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const toggleFullscreen = () => {
     try {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(() => { });
       } else {
         if (document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
+          document.exitFullscreen().catch(() => { });
         }
       }
     } catch (err) {

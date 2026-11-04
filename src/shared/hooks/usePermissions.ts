@@ -1,40 +1,108 @@
 import { useAuthStore } from '@/stores/authStore';
+import { isUserAdmin } from '@/shared/utils/roles';
 
-const MODULE_PERMISSIONS: Record<string, string[]> = {
-  dashboard: ['dashboard:view', 'Dashboard'],
-  tickets: ['tickets:view', 'tickets:create', 'tickets:edit', 'tickets:delete', 'Ticket List'],
-  create_ticket: ['tickets:create', 'Create Ticket'],
-  departments: ['departments:view', 'departments:create', 'departments:edit', 'departments:delete', 'Departments'],
-  users: ['users:view', 'users:create', 'users:edit', 'users:delete', 'User Management'],
-  masters: ['masters:view', 'masters:create', 'masters:edit', 'masters:delete', 'Master'],
-  roles: ['roles:view', 'roles:create', 'roles:edit', 'roles:delete', 'Roles & Permissions'],
-};
+/**
+ * Normalizes an identifier for flexible, dynamic comparison:
+ * e.g. "User Management" -> "users", "Category Masters" -> "masters", "Roles & Permissions" -> "roles"
+ */
+function normalizeIdentifier(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
 
+/**
+ * Dynamic permission evaluator:
+ * Dynamically resolves permissions, module scopes, and actions without hardcoded static lists.
+ */
 export function usePermissions() {
   const user = useAuthStore((s) => s.user);
-  const isAdmin = user?.role === 'admin';
-  const permissions = user?.permissions ?? [];
+  const isAdmin = isUserAdmin(user);
+  const permissions: string[] = user?.permissions ?? [];
 
+  /**
+   * Dynamically checks if the user has any of the requested permissions.
+   * Matches:
+   * 1. Exact slug match
+   * 2. Case-insensitive / normalized match
+   * 3. Prefix matching: target "tickets" matches "tickets:view", "tickets:create", etc.
+   * 4. Broad management match: user having "tickets:manage" or "tickets" grants all actions on tickets.
+   */
   const hasPermission = (...perms: string[]): boolean => {
     if (isAdmin) return true;
+    if (!permissions.length) return false;
+
     return perms.some((perm) => {
       if (permissions.includes(perm)) return true;
-      const lower = perm.toLowerCase();
-      const aliases = MODULE_PERMISSIONS[lower];
-      if (aliases && aliases.some((a) => permissions.includes(a))) return true;
-      return false;
+
+      const normTarget = normalizeIdentifier(perm);
+
+      return permissions.some((userPerm) => {
+        const normUser = normalizeIdentifier(userPerm);
+        if (normUser === normTarget) return true;
+
+        // Prefix match: e.g. target="tickets" matches "tickets_view" or "tickets:view"
+        if (normUser.startsWith(`${normTarget}_`) || normUser.startsWith(`${normTarget}:`)) {
+          return true;
+        }
+
+        // Module and action comparison
+        const [targetMod, targetAct] = normTarget.split(/[:_]/);
+        const [userMod, userAct] = normUser.split(/[:_]/);
+
+        if (targetMod && userMod && targetMod === userMod) {
+          if (userAct === 'manage' || userAct === 'all' || !userAct || userAct === targetAct) {
+            return true;
+          }
+        }
+
+        return false;
+      });
     });
   };
 
-  const can = (action: 'view' | 'create' | 'edit' | 'delete', module: string): boolean => {
+  /**
+   * Dynamically checks if the user can perform a specific action on a module.
+   * e.g. can('view', 'tickets'), can('create', 'departments'), can('delete', 'roles')
+   * Purely dynamic — operates on any module name and action without hardcoded switches.
+   */
+  const can = (action: string, module: string): boolean => {
     if (isAdmin) return true;
-    const directSlug = `${module}:${action}`;
-    if (permissions.includes(directSlug)) return true;
-    if (module === 'departments' && permissions.includes('Departments')) return true;
-    if (module === 'users' && permissions.includes('User Management')) return true;
-    if (module === 'masters' && permissions.includes('Master')) return true;
-    if (module === 'tickets' && (permissions.includes('Ticket List') || permissions.includes('Create Ticket'))) return true;
-    return false;
+    if (!permissions.length) return false;
+
+    const normMod = normalizeIdentifier(module);
+    const normAct = normalizeIdentifier(action);
+
+    return permissions.some((userPerm) => {
+      const normUser = normalizeIdentifier(userPerm);
+
+      // Exact slug match: e.g. "tickets_view" or "tickets:view"
+      if (normUser === `${normMod}_${normAct}` || normUser === `${normMod}:${normAct}`) {
+        return true;
+      }
+
+      // Broad management match: e.g. "tickets_manage", "tickets_all", or "tickets"
+      if (normUser === `${normMod}_manage` || normUser === `${normMod}_all` || normUser === normMod) {
+        return true;
+      }
+
+      // Dynamic sub-part match
+      const parts = userPerm.toLowerCase().split(/[:_]/);
+      if (parts.length >= 2) {
+        const pMod = normalizeIdentifier(parts[0]);
+        const pAct = normalizeIdentifier(parts.slice(1).join('_'));
+
+        if (pMod === normMod) {
+          if (pAct === normAct || pAct === 'manage' || pAct === 'all') {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
   };
 
   return {

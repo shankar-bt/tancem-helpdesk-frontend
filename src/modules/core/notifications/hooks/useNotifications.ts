@@ -1,14 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/authStore';
 import { notificationApi } from '../api/notificationApi';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
+  byUser: (userId?: string) => ['notifications', userId || 'anonymous'] as const,
 };
 
 export function useNotifications() {
+  const user = useAuthStore((s) => s.user);
   return useQuery({
-    queryKey: notificationKeys.all,
+    queryKey: notificationKeys.byUser(user?.id),
     queryFn: () => notificationApi.list(),
+    enabled: Boolean(user?.id),
     refetchInterval: 15000,
     staleTime: 5000,
   });

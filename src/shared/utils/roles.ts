@@ -31,7 +31,32 @@ export function isUserAdmin(
   roles?: Role[] | Map<string, Role>
 ): boolean {
   if (!user) return false;
-  if (user.role === 'admin') return true;
+  const directRole = (user.role || '').toLowerCase();
+  if (
+    directRole === 'admin' ||
+    directRole === 'super_admin' ||
+    directRole === 'superadmin' ||
+    directRole === 'super-admin' ||
+    directRole === 'administrator' ||
+    directRole.includes('admin')
+  ) {
+    return true;
+  }
+
+  const roleSlug = ((user as any).roleSlug || '').toLowerCase();
+  const roleName = ((user as any).roleName || '').toLowerCase();
+  if (
+    roleSlug === 'admin' ||
+    roleSlug === 'super_admin' ||
+    roleSlug === 'superadmin' ||
+    roleSlug === 'super-admin' ||
+    roleSlug === 'administrator' ||
+    roleSlug.includes('admin') ||
+    roleName.includes('admin')
+  ) {
+    return true;
+  }
+
   if (roles) {
     const roleObj = getRoleFromUser(user, roles);
     if (roleObj) {
@@ -39,6 +64,9 @@ export function isUserAdmin(
       const name = (roleObj.name || '').toLowerCase();
       if (
         slug === 'admin' ||
+        slug === 'super_admin' ||
+        slug === 'superadmin' ||
+        slug === 'super-admin' ||
         slug === 'administrator' ||
         slug.includes('admin') ||
         name.includes('admin')

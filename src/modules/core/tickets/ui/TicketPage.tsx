@@ -710,22 +710,42 @@ export default function TicketPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {data?.items.map((t, idx) => (
-                  <TableRow
-                    key={t.id}
-                    hover
-                    sx={{
-                      '& td': { py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' },
-                      '&:hover .sticky-pinned-cell': { bgcolor: '#f8fafc' },
-                    }}
-                  >
-                    <TableCell
-                      align="center"
-                      className={isPinned('sno') ? 'sticky-pinned-cell' : undefined}
-                      sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8125rem', ...getStickyStyles('sno', false) }}
+                {data?.items.map((t, idx) => {
+                  const isClosedOrResolved = t.status === 'resolved' || t.status === 'closed';
+                  const isBreached = !isClosedOrResolved && (t.slaBreached || t.slaStatus === 'breached');
+                  const isAtRisk = !isClosedOrResolved && !isBreached && t.slaStatus === 'at_risk';
+
+                  return (
+                    <TableRow
+                      key={t.id}
+                      hover
+                      sx={{
+                        bgcolor: isBreached
+                          ? 'rgba(239, 68, 68, 0.02)'
+                          : isAtRisk
+                          ? 'rgba(245, 158, 11, 0.02)'
+                          : undefined,
+                        '& td': { py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' },
+                        '&:hover .sticky-pinned-cell': { bgcolor: '#f8fafc' },
+                      }}
                     >
-                      {(page - 1) * limit + idx + 1}
-                    </TableCell>
+                      <TableCell
+                        align="center"
+                        className={isPinned('sno') ? 'sticky-pinned-cell' : undefined}
+                        sx={{
+                          fontWeight: 600,
+                          color: 'text.secondary',
+                          fontSize: '0.8125rem',
+                          borderLeft: isBreached
+                            ? '4px solid #ef4444'
+                            : isAtRisk
+                            ? '4px solid #f59e0b'
+                            : '4px solid transparent',
+                          ...getStickyStyles('sno', false),
+                        }}
+                      >
+                        {(page - 1) * limit + idx + 1}
+                      </TableCell>
                     <TableCell
                       className={isPinned('ticketNumber') ? 'sticky-pinned-cell' : undefined}
                       sx={{ whiteSpace: 'nowrap', ...getStickyStyles('ticketNumber', false) }}
@@ -934,7 +954,8 @@ export default function TicketPage() {
                       </Stack>
                     </TableCell>
                   </TableRow>
-                ))}
+                );
+              })}
               </TableBody>
             </Table>
           </TableContainer>

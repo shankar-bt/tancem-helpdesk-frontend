@@ -33,7 +33,7 @@ import { useRoles } from '@/modules/core/roles/hooks/useRoles';
 import { useUsers } from '@/modules/core/user/hooks/useUser';
 import { LoadingBlock } from '@/shared/design-system';
 import { getErrorMessage } from '@/shared/utils/errors';
-import { formatDate } from '@/shared/utils/format';
+import { formatDate, formatDateTime } from '@/shared/utils/format';
 import {
   isUserAdmin,
   isUserAgent,
@@ -52,7 +52,7 @@ import {
   useUpdateTicketStatus,
 } from '../hooks/useTickets';
 import { ticketApi } from '../api/ticketApi';
-import SlaBadge from './SlaBadge';
+import SlaBadge, { SlaProgressBar } from './SlaBadge';
 import TicketAttachmentPreview from './TicketAttachmentPreview';
 import type { TicketAttachment, TicketComment, TicketStatus } from '../types';
 
@@ -447,11 +447,14 @@ export default function TicketDetailModal({ open, onClose, ticketId, onUpdated }
                 <SlaBadge ticket={ticket} size="medium" />
               </Stack>
 
+              <SlaProgressBar ticket={ticket} />
+
               <Box
                 display="grid"
                 gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }}
                 gap={2}
                 pt={1.5}
+                mt={1.5}
                 sx={{ borderTop: '1px dashed rgba(0,0,0,0.1)' }}
               >
                 <Box>
@@ -459,7 +462,7 @@ export default function TicketDetailModal({ open, onClose, ticketId, onUpdated }
                     Resolution Target Deadline
                   </Typography>
                   <Typography variant="body2" fontWeight={600}>
-                    {ticket.resolutionDueAt ? formatDate(ticket.resolutionDueAt) : 'Not assigned'}
+                    {ticket.resolutionDueAt ? formatDateTime(ticket.resolutionDueAt) : 'Not assigned'}
                   </Typography>
                 </Box>
                 <Box>
@@ -467,11 +470,11 @@ export default function TicketDetailModal({ open, onClose, ticketId, onUpdated }
                     First Response Target
                   </Typography>
                   <Typography variant="body2" fontWeight={600}>
-                    {ticket.firstResponseDueAt ? formatDate(ticket.firstResponseDueAt) : 'Not assigned'}
+                    {ticket.firstResponseDueAt ? formatDateTime(ticket.firstResponseDueAt) : 'Not assigned'}
                   </Typography>
                   {ticket.firstRespondedAt && (
                     <Typography variant="caption" color="success.main" display="block" sx={{ mt: 0.25 }}>
-                      ✓ Responded: {formatDate(ticket.firstRespondedAt)}
+                      ✓ Responded: {formatDateTime(ticket.firstRespondedAt)}
                     </Typography>
                   )}
                 </Box>
